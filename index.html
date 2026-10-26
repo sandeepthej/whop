@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WhopClip Radar | Whop Content Rewards Budget & Loop Milestone Tracker</title>
+  <meta name="description" content="Real-time campaign budget tracker for Whop Content Rewards clippers. Pin live campaigns, track pool depletion, and get looping alerts every $100, $300, $500 or custom milestone without requiring platform credentials." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <!-- Header / Navigation -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand-group">
+        <div class="brand-icon-wrapper">
+          <div class="brand-pulse"></div>
+          <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+          </svg>
+        </div>
+        <div>
+          <div class="brand-title-row">
+            <h1 class="brand-title">WhopClip Radar</h1>
+            <span class="badge badge-live"><span class="live-dot"></span> LIVE CONTENT REWARDS</span>
+            <span class="badge badge-emerald" title="Direct live access to all active campaigns on contentrewards.com">⚡ DIRECT LIVE ACCESS</span>
+          </div>
+          <p class="brand-subtitle">Whop Content Rewards • Real-Time Campaign Pool Depletion & Looping Milestone Alerts</p>
+        </div>
+      </div>
+
+      <div class="header-controls">
+        <!-- Direct Live Sync from Whop / Content Rewards -->
+        <button id="syncLiveBtn" class="btn btn-sm btn-primary" title="Fetch newest pool balances directly from contentrewards.com">
+          <span id="syncSpinner" class="sync-icon">🔄</span> <span id="syncBtnText">Sync Live Whop</span>
+        </button>
+
+        <!-- Auto-Sync Toggle -->
+        <div class="control-card auto-sync-control" title="Automatically polls live pool budgets from Whop every 30 seconds">
+          <label class="auto-sync-label">
+            <input type="checkbox" id="autoSyncCheckbox" checked />
+            <span class="auto-sync-text">Auto-Sync <span class="text-cyan">(30s)</span></span>
+          </label>
+          <span id="syncTimeBadge" class="sync-time-badge">Just now</span>
+        </div>
+
+        <!-- Live Simulation / Drain Toggle for Testing -->
+        <div class="control-card sim-control" title="Simulates real-time video view payouts to test your milestone alerts">
+          <div class="control-label-group">
+            <span class="control-label">Test Drain</span>
+            <span class="sim-speed-badge" id="simSpeedBadge">1x</span>
+          </div>
+          <div class="sim-actions">
+            <button id="toggleSimBtn" class="btn btn-sm btn-outline-cyan">
+              <span id="simBtnIcon">▶</span> <span id="simBtnText">Sim</span>
+            </button>
+            <select id="simSpeedSelect" class="select-sm" aria-label="Simulation Speed">
+              <option value="1">1x</option>
+              <option value="5" selected>5x</option>
+              <option value="20">20x</option>
+              <option value="100">100x</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Audio Alerts Control -->
+        <div class="control-card audio-control">
+          <button id="toggleAudioBtn" class="btn-icon" title="Toggle Sound Alerts" aria-label="Toggle Sound Alerts">
+            <svg id="audioIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+            </svg>
+          </button>
+          <button id="testSoundBtn" class="btn btn-sm btn-ghost" title="Test Alert Sound">Test Chime</button>
+        </div>
+
+        <!-- Desktop Notifications -->
+        <button id="enableNotifBtn" class="btn btn-sm btn-outline-amber" title="Allow Desktop Push Notifications">
+          <span class="bell-icon">🔔</span> Alerts: <span id="notifStatusText">Enable</span>
+        </button>
+
+        <!-- Discord Webhook Settings -->
+        <button id="openWebhookModalBtn" class="btn btn-sm btn-ghost" title="Send alerts to Discord Webhook">
+          <span style="font-size:1rem;">💬</span> Discord Alerts
+        </button>
+
+        <!-- Add Custom Campaign -->
+        <button id="openAddModalBtn" class="btn btn-sm btn-primary">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="btn-svg"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          Add Campaign
+        </button>
+
+        <!-- Quick Import / Paste -->
+        <button id="openImportModalBtn" class="btn btn-sm btn-secondary" title="Paste Whop campaign URL or text details">
+          📥 Paste URL/Data
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Live Stats Ticker Bar -->
+  <section class="metrics-bar">
+    <div class="metrics-container">
+      <div class="metric-item">
+        <span class="metric-label">Pinned Focus Campaigns</span>
+        <div class="metric-val-row">
+          <span class="metric-val text-violet" id="statPinnedCount">0</span>
+          <span class="metric-sub" id="statPinnedSub">Active Watchlist</span>
+        </div>
+      </div>
+      <div class="metric-divider"></div>
+      <div class="metric-item">
+        <span class="metric-label">Total Pool Monitored</span>
+        <div class="metric-val-row">
+          <span class="metric-val text-cyan" id="statTotalPool">$0</span>
+          <span class="metric-sub">Across all campaigns</span>
+        </div>
+      </div>
+      <div class="metric-divider"></div>
+      <div class="metric-item">
+        <span class="metric-label">Total Budget Completed (Spent)</span>
+        <div class="metric-val-row">
+          <span class="metric-val text-emerald" id="statTotalSpent">$0</span>
+          <span class="metric-sub" id="statSpentPercent">0% finished</span>
+        </div>
+      </div>
+      <div class="metric-divider"></div>
+      <div class="metric-item">
+        <span class="metric-label">Loop Milestones Triggered</span>
+        <div class="metric-val-row">
+          <span class="metric-val text-amber" id="statMilestoneHits">0</span>
+          <span class="metric-sub">Audible loop alerts fired</span>
+        </div>
+      </div>
+      <div class="metric-divider"></div>
+      <div class="metric-item calc-teaser">
+        <button id="openCalcBtn" class="btn btn-sm btn-ghost-cyan">
+          ⚡ Clipper View Payout Calculator
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Workspace -->
+  <main class="main-content">
+    
+    <!-- SECTION 1: PINNED CAMPAIGNS FOCUS DECK -->
+    <section class="section pinned-section" id="pinnedSection">
+      <div class="section-header">
+        <div class="section-title-group">
+          <div class="pin-badge-icon">📌</div>
+          <div>
+            <h2 class="section-title">Pinned Focus Campaigns (<span id="pinnedBadgeCount">0</span>)</h2>
+            <p class="section-desc">Your high-priority live campaigns. Track budget burn in real-time with automated loop alerts for every $X completed.</p>
+          </div>
+        </div>
+        <div class="pinned-header-actions">
+          <button id="openPinSelectorBtn" class="btn btn-sm btn-primary" title="Open compact campaign picker to choose which campaigns to pin">
+            📌 Choose & Pin Campaigns (<span id="btnPinCount">0</span>/<span id="btnTotalCount">77</span>)
+          </button>
+          <span class="tag-live-pulse"><span class="pulse-ring"></span> Live Loop Active</span>
+        </div>
+      </div>
+
+      <!-- Empty state when no campaigns are pinned -->
+      <div id="pinnedEmptyState" class="pinned-empty-state">
+        <div class="empty-icon-box">📌</div>
+        <h3>No Campaigns Pinned Yet</h3>
+        <p>Click the <strong>Pin (📌)</strong> button on any campaign below to anchor it here for priority monitoring, live velocity tracking, and looping notifications!</p>
+        <button id="pinFirstBtn" class="btn btn-sm btn-outline-cyan">Pin Top Recommended Campaign</button>
+      </div>
+
+      <!-- Pinned Cards Grid -->
+      <div id="pinnedCardsGrid" class="pinned-cards-grid"></div>
+    </section>
+
+    <!-- SECTION 2: LIVE NOTIFICATION LOOP AUDIT LOG -->
+    <section class="section notif-feed-section">
+      <div class="section-header notif-header">
+        <div class="section-title-group">
+          <div class="bell-badge-icon">🔔</div>
+          <div>
+            <h3 class="section-title">Milestone Loop Notification Log</h3>
+            <p class="section-desc">Continuously tracks every completed chunk (e.g. $100, $300, $500) and triggers notifications in a loop.</p>
+          </div>
+        </div>
+        <div class="notif-actions">
+          <button id="clearNotifsBtn" class="btn btn-xs btn-ghost">Clear Log</button>
+          <button id="simulateMilestoneBtn" class="btn btn-xs btn-outline-amber" title="Simulate an instant $300 or $500 milestone hit">
+            ⚡ Test $300 Hit
+          </button>
+        </div>
+      </div>
+      <div class="notif-feed-scroll" id="notifFeed">
+        <div class="notif-empty" id="notifEmpty">
+          <span class="notif-empty-icon">🎯</span>
+          <span>Ready to track. Set your notification loop interval (e.g. $300, $500) on any campaign. Alerts will appear here and sound chimes when budget targets are completed.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 3: ALL LIVE CAMPAIGNS DIRECTORY -->
+    <section class="section directory-section">
+      <div class="section-header directory-header">
+        <div class="section-title-group">
+          <div class="folder-badge-icon">⚡</div>
+          <div>
+            <h2 class="section-title">Live Content Rewards Campaigns</h2>
+            <p class="section-desc">All campaigns currently active on Whop Content Rewards. Choose and pin the ones you want to clip for.</p>
+          </div>
+        </div>
+
+        <!-- Search & Filter Controls -->
+        <div class="filter-toolbar">
+          <div class="search-input-wrapper">
+            <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text" id="campaignSearchInput" placeholder="Search campaigns, brands, platforms..." class="search-input" />
+            <button id="clearSearchBtn" class="clear-search-btn" style="display:none;">&times;</button>
+          </div>
+
+          <div class="filter-pill-group">
+            <button class="filter-pill active" data-filter="all">All Live (<span id="totalLiveCount">0</span>)</button>
+            <button class="filter-pill" data-filter="pinned">📌 Pinned Only (<span id="filterPinnedCount">0</span>)</button>
+            <button class="filter-pill" data-filter="new-arrivals">✨ New Arrivals (<span id="filterNewCount">0</span>)</button>
+            <button class="filter-pill" data-filter="roblox">Roblox & Gaming</button>
+            <button class="filter-pill" data-filter="podcasts">Podcasts & Streams</button>
+            <button class="filter-pill" data-filter="brands">Brands & Tech</button>
+            <button class="filter-pill" data-filter="high-cpm">🔥 High CPM ($1.50+)</button>
+            <button class="filter-pill" data-filter="ending">🔴 &lt; $1,000 Left</button>
+          </div>
+
+          <div class="view-mode-toggle">
+            <button id="viewListBtn" class="btn btn-xs btn-outline-cyan active" title="Compact Table / List View (See all campaigns without massive scrolling)">
+              📋 Compact List
+            </button>
+            <button id="viewGridBtn" class="btn btn-xs btn-ghost" title="Cards Grid View">
+              🗂️ Cards View
+            </button>
+          </div>
+
+          <div class="sort-select-wrapper">
+            <label for="campaignSortSelect" class="sort-label">Sort:</label>
+            <select id="campaignSortSelect" class="select-sm">
+              <option value="burn">Fastest Burn Velocity</option>
+              <option value="budget-high">Highest Total Pool</option>
+              <option value="remaining-high">Most Remaining Budget</option>
+              <option value="cpm-high">Highest CPM Payout</option>
+              <option value="alphabetical">Name (A-Z)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Campaigns Directory Grid -->
+      <div id="campaignsGrid" class="campaigns-grid"></div>
+    </section>
+
+  </main>
+
+  <!-- MODAL: ADD CUSTOM CAMPAIGN -->
+  <div id="addModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Add Live Whop Campaign</h3>
+        <button class="modal-close-btn" data-close="addModal">&times;</button>
+      </div>
+      <form id="addCampaignForm" class="modal-form">
+        <div class="form-group">
+          <label for="newTitle">Campaign Name *</label>
+          <input type="text" id="newTitle" placeholder="e.g. Kick Creator Highlights V3" required class="input-text" />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="newBrand">Brand / Creator Community *</label>
+            <input type="text" id="newBrand" placeholder="e.g. Kick / Adin Live" required class="input-text" />
+          </div>
+          <div class="form-group">
+            <label for="newCategory">Category / Niche</label>
+            <select id="newCategory" class="select-text">
+              <option value="Gaming & Streamers">Gaming & Streamers</option>
+              <option value="SaaS & AI Tools">SaaS & AI Tools</option>
+              <option value="Crypto & Web3">Crypto & Web3</option>
+              <option value="Fitness & Health">Fitness & Health</option>
+              <option value="Business & Finance">Business & Finance</option>
+              <option value="Entertainment">Entertainment</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="newTotalBudget">Total Pool Budget ($) *</label>
+            <input type="number" id="newTotalBudget" placeholder="5000" min="100" step="10" required class="input-text" />
+          </div>
+          <div class="form-group">
+            <label for="newCurrentBudget">Current Remaining Budget ($) *</label>
+            <input type="number" id="newCurrentBudget" placeholder="4500" min="0" step="10" required class="input-text" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="newCpm">CPM Rate ($ per 1K views) *</label>
+            <input type="number" id="newCpm" placeholder="1.50" min="0.10" step="0.05" required class="input-text" />
+          </div>
+          <div class="form-group">
+            <label for="newMilestoneInterval">Notification Loop Step ($) *</label>
+            <select id="newMilestoneInterval" class="select-text">
+              <option value="100">Every $100 completed</option>
+              <option value="200">Every $200 completed</option>
+              <option value="300">Every $300 completed</option>
+              <option value="500" selected>Every $500 completed (Default)</option>
+              <option value="1000">Every $1,000 completed</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="newWhopUrl">Whop Campaign Link (Optional)</label>
+          <input type="url" id="newWhopUrl" placeholder="https://contentrewards.com/c/campaigns/..." class="input-text" />
+        </div>
+        <div class="form-group checkbox-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="newPinImmediately" checked />
+            <span>Pin immediately to Focus Watchlist</span>
+          </label>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" data-close="addModal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Add & Start Tracking</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: QUICK IMPORT / PASTE -->
+  <div id="importModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Paste Whop Campaign URL or Text</h3>
+        <button class="modal-close-btn" data-close="importModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-desc">No login or private API keys needed! Simply paste the campaign URL or copy-paste text from Whop / Content Rewards page, and our parser will extract the budget and details automatically.</p>
+        <div class="form-group">
+          <label for="importRawText">Campaign URL or Page Text snippet</label>
+          <textarea id="importRawText" rows="5" class="input-textarea" placeholder="Example:
+https://contentrewards.com/c/campaigns/neon-ai-video
+Total Pool: $10,000 | Remaining: $7,200 | CPM: $2.00"></textarea>
+        </div>
+        <div class="parse-preview" id="parsePreview" style="display:none;">
+          <div class="preview-badge">Detected Data</div>
+          <div id="previewDetails" class="preview-content"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" data-close="importModal">Cancel</button>
+        <button type="button" id="parseImportBtn" class="btn btn-secondary">Analyze & Parse</button>
+        <button type="button" id="confirmImportBtn" class="btn btn-primary" style="display:none;">Add Campaign</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CLIPPER PAYOUT & SAFETY CALCULATOR -->
+  <div id="calcModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <h3 class="modal-title">⚡ Clipper View Payout & Pool Runway Calculator</h3>
+        <button class="modal-close-btn" data-close="calcModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-desc">Estimate how many views your clips will get, your expected dollar payout, and verify whether the remaining campaign budget has sufficient funds before you start clipping.</p>
+        <div class="calc-grid">
+          <div class="calc-inputs">
+            <div class="form-group">
+              <label for="calcCampaignSelect">Select Campaign</label>
+              <select id="calcCampaignSelect" class="select-text"></select>
+            </div>
+            <div class="form-group">
+              <label for="calcViewsInput">Your Projected Views (Across all clips)</label>
+              <div class="input-with-quick">
+                <input type="number" id="calcViewsInput" value="100000" step="5000" min="1000" class="input-text" />
+                <div class="quick-view-pills">
+                  <button type="button" class="pill-btn" data-views="25000">25K</button>
+                  <button type="button" class="pill-btn" data-views="50000">50K</button>
+                  <button type="button" class="pill-btn" data-views="100000">100K</button>
+                  <button type="button" class="pill-btn" data-views="250000">250K</button>
+                  <button type="button" class="pill-btn" data-views="500000">500K</button>
+                </div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="calcCpmInput">Campaign CPM ($ per 1K views)</label>
+              <input type="number" id="calcCpmInput" value="1.50" step="0.1" min="0.1" class="input-text" />
+            </div>
+          </div>
+          <div class="calc-results-card">
+            <div class="result-box-top">
+              <span class="calc-res-label">Your Projected Payout</span>
+              <div class="calc-res-big" id="calcProjectedPayout">$150.00</div>
+              <span class="calc-res-sub" id="calcViewsSub">Based on 100,000 views</span>
+            </div>
+            <div class="result-details">
+              <div class="res-row">
+                <span>Remaining Pool Budget:</span>
+                <strong id="calcPoolRemaining">$0</strong>
+              </div>
+              <div class="res-row">
+                <span>% of Pool You Will Claim:</span>
+                <strong id="calcPoolClaimShare">0%</strong>
+              </div>
+              <div class="res-row">
+                <span>Pool Status for Clipping:</span>
+                <span id="calcPoolSafetyBadge" class="badge badge-emerald">Safe to Post</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" data-close="calcModal">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: MANUAL BALANCE EDIT / CALIBRATION -->
+  <div id="balanceModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Sync / Update Campaign Remaining Budget</h3>
+        <button class="modal-close-btn" data-close="balanceModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-desc">Enter the newest remaining budget seen on Whop Content Rewards. The tracker will instantly check if any new milestone loops ($100, $300, $500) were completed.</p>
+        <div class="camp-sync-info" id="balanceCampInfo"></div>
+        <div class="form-group">
+          <label for="editRemainingBudget">New Remaining Budget ($) *</label>
+          <input type="number" id="editRemainingBudget" step="1" min="0" class="input-text input-lg" />
+        </div>
+        <div class="quick-adjust-group">
+          <span class="adjust-label">Quick test drop:</span>
+          <button type="button" class="btn btn-xs btn-outline-cyan adjust-btn" data-drop="100">-$100</button>
+          <button type="button" class="btn btn-xs btn-outline-cyan adjust-btn" data-drop="200">-$200</button>
+          <button type="button" class="btn btn-xs btn-outline-amber adjust-btn" data-drop="300">-$300</button>
+          <button type="button" class="btn btn-xs btn-outline-rose adjust-btn" data-drop="500">-$500</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" data-close="balanceModal">Cancel</button>
+        <button type="button" id="saveBalanceBtn" class="btn btn-primary">Save & Check Milestones</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: DISCORD WEBHOOK INTEGRATION -->
+  <div id="webhookModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">💬 Discord Webhook Alerts</h3>
+        <button class="modal-close-btn" data-close="webhookModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-desc">Get notified on your phone or in your private clipping Discord server whenever a campaign completes a milestone (e.g. $300 or $500 finished from pool).</p>
+        <div class="form-group">
+          <label for="discordWebhookInput">Discord Webhook URL</label>
+          <input type="url" id="discordWebhookInput" placeholder="https://discord.com/api/webhooks/..." class="input-text" />
+        </div>
+        <div class="form-group checkbox-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="discordWebhookEnabled" />
+            <span>Enable Discord Webhook notifications</span>
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" data-close="webhookModal">Cancel</button>
+        <button type="button" id="testDiscordWebhookBtn" class="btn btn-outline-cyan">Send Test Ping</button>
+        <button type="button" id="saveDiscordWebhookBtn" class="btn btn-primary">Save Webhook</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: PIN CAMPAIGN SELECTOR / PICKER -->
+  <div id="pinSelectorModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title">📌 Choose & Pin Campaigns (<span id="modalPinnedCount">0</span> Pinned)</h3>
+          <p class="modal-desc" style="margin-top:0.25rem;">Select the exact campaigns you want to track. All pinned campaigns stay front-and-center in your focus deck with live loop alerts.</p>
+        </div>
+        <button class="modal-close-btn" data-close="pinSelectorModal">&times;</button>
+      </div>
+
+      <!-- Search Bar Inside Picker Modal -->
+      <div class="picker-search-bar">
+        <div class="search-input-wrapper" style="flex: 1; min-width: 220px;">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="text" id="pickerSearchInput" placeholder="Quick search campaigns by name, brand, or niche..." class="search-input" autofocus />
+          <button id="clearPickerSearchBtn" class="clear-search-btn" style="display:none;">&times;</button>
+        </div>
+        <div class="picker-category-filter">
+          <select id="pickerCatSelect" class="select-sm">
+            <option value="all">All Categories</option>
+            <option value="roblox">Roblox & Gaming</option>
+            <option value="podcast">Podcasts & Streams</option>
+            <option value="brand">Brands & Tech</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Quick Action Shortcuts Bar -->
+      <div class="picker-quick-bar">
+        <div class="picker-shortcuts">
+          <span style="font-size: 0.72rem; color: var(--text-dim); margin-right: 0.2rem;">Shortcuts:</span>
+          <button type="button" id="pickerPinTop5Btn" class="btn btn-xs btn-outline-cyan">Pin Top 5 Pools</button>
+          <button type="button" id="pickerPinHighCpmBtn" class="btn btn-xs btn-outline-cyan">Pin High CPM ($2+)</button>
+          <button type="button" id="pickerClearAllBtn" class="btn btn-xs btn-ghost">Unpin All</button>
+        </div>
+        <span id="pickerMatchCount" style="font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-mono);">Showing 77 campaigns</span>
+      </div>
+
+      <!-- Compact Scrollable Table / Checklist of All Campaigns -->
+      <div class="picker-table-wrapper">
+        <table class="picker-table">
+          <thead>
+            <tr>
+              <th style="width: 80px; text-align: center;">PIN</th>
+              <th>CAMPAIGN & BRAND</th>
+              <th>TOTAL POOL</th>
+              <th>REMAINING POOL</th>
+              <th>CPM</th>
+              <th>LOOP ALERT</th>
+            </tr>
+          </thead>
+          <tbody id="pickerTableBody"></tbody>
+        </table>
+      </div>
+
+      <div class="modal-footer">
+        <span style="font-size: 0.8rem; color: var(--text-muted); margin-right: auto;">
+          <span id="pickerTotalDisplay">0</span> campaigns loaded from Content Rewards
+        </span>
+        <button type="button" class="btn btn-primary" data-close="pinSelectorModal">Done & View Watchlist</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
+  <!-- SCRIPT -->
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
