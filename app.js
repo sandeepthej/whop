@@ -79,8 +79,32 @@ class WhopRewardsTracker {
     if (syncBtnText) syncBtnText.innerText = 'Syncing...';
 
     try {
-      const res = await fetch('/api/sync-live');
-      const data = await res.json();
+      let data = null;
+
+      // Tier 1: Try local Vite server / Vercel Serverless Function (/api/sync-live)
+      try {
+        const res = await fetch('/api/sync-live');
+        if (res.ok) {
+          data = await res.json();
+        }
+      } catch (e) {
+        console.warn('Backend /api/sync-live not reachable (static export mode):', e);
+      }
+
+      // Tier 2: Fallback to bundled campaigns snapshot (ensures all 77 campaigns load on GitHub Pages & static exports)
+      if (!data || !data.success || !Array.isArray(data.campaigns) || data.campaigns.length === 0) {
+        try {
+          const snapRes = await fetch('./campaigns_snapshot.json');
+          if (snapRes.ok) {
+            data = await snapRes.json();
+          }
+        } catch (e) {
+          try {
+            const snapRes = await fetch('/campaigns_snapshot.json');
+            if (snapRes.ok) data = await snapRes.json();
+          } catch (e2) {}
+        }
+      }
 
       if (data && data.success && Array.isArray(data.campaigns)) {
         let updatedCount = 0;
