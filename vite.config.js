@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import { fetchLiveContentRewardsCampaigns } from './live_sync.js';
 
 export default defineConfig({
+  base: './',
   server: {
     port: 5173
   },
